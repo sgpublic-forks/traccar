@@ -77,4 +77,8 @@ public final class PositionUtil {
                 .collect(Collectors.toList());
     }
 
+    public static List<Position> getLatestUnconvertedPositions(Storage storage, String platform, int limit) throws StorageException {
+        // TODO: use left join to get unconverted positions
+        return null;
+    }
 }

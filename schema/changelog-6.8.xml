@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd"
+  logicalFilePath="changelog-6.8">
+
+  <property name="tc_converted_position.platform" value="AutoNavi,Baidu,Tencent" />
+  <property name="tc_converted_position.crs" value="GCJ_02,BD_09" />
+
+  <changeSet author="author" id="changelog-6.8">
+
+    <createTable tableName="tc_converted_position">
+      <column name="id" type="INT">
+        <constraints nullable="false" />
+      </column>
+      <column name="platform" type="VARCHAR(16)">
+        <constraints nullable="false" checkConstraint="${tc_converted_position.platform}" />
+      </column>
+      <column name="crs" type="VARCHAR(10)">
+        <constraints nullable="false" checkConstraint="${tc_converted_position.crs}" />
+      </column>
+      <column name="latitude" type="DOUBLE">
+        <constraints nullable="false" />
+      </column>
+      <column name="longitude" type="DOUBLE">
+        <constraints nullable="false" />
+      </column>
+
+      <column name="attributes" type="VARCHAR(4000)">
+        <constraints nullable="false" />
+      </column>
+    </createTable>
+
+    <addPrimaryKey tableName="tc_converted_position" columnNames="id, platform" />
+
+    <addForeignKeyConstraint baseTableName="tc_converter_position" baseColumnNames="id" constraintName="fk_position_id" referencedTableName="tc_position" referencedColumnNames="id" onDelete="CASCADE" onUpdate="NO ACTION" />
+
+    <createIndex tableName="tc_converted_position" indexName="idx_tc_converted_position_crs">
+      <column>platform</column>
+      <column>crs</column>
+    </createIndex>
+    <createIndex tableName="tc_position" indexName="idx_tc_position_latitude_longitude">
+      <column>latitude</column>
+      <column>longitude</column>
+    </createIndex>
+  </changeSet>
+
+</databaseChangeLog>
