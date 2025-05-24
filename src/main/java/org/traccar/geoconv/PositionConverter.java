@@ -119,6 +119,7 @@ public abstract class PositionConverter extends BasePositionHandler implements S
                 synchronized (this) {
                     requestPositions = PositionUtil.getLatestUnconvertedPositions(storage, platform, getMaxPositionPerRequest());
                     if (requestPositions.isEmpty()) {
+                        LOGGER.debug("No positions of platform {} are waiting converting, wait for 30s...", platform);
                         this.wait(30_000);
                         continue;
                     }
@@ -126,7 +127,7 @@ public abstract class PositionConverter extends BasePositionHandler implements S
             } catch (InterruptedException ignore) {
                 break;
             } catch (Exception error) {
-                LOGGER.debug("Failed to get non-converted position from database", error);
+                LOGGER.error("Failed to get non-converted position from database", error);
                 continue;
             }
             List<ConvertedPosition> convertedPositions;
@@ -173,6 +174,7 @@ public abstract class PositionConverter extends BasePositionHandler implements S
     private void save(ConvertedPosition convertedPosition) {
         try {
             storage.addObject(convertedPosition, new Request(new Columns.All()));
+            LOGGER.info("Converted position stored, id: {}", convertedPosition.getId());
         } catch (Exception error) {
             LOGGER.warn("Failed to store converted position, id: {}", convertedPosition.getId(), error);
         }

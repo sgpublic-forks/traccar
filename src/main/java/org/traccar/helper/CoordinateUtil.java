@@ -43,8 +43,8 @@ public final class CoordinateUtil {
     public static final double CORRECTION_PARAM = 0.00669342162296594323D;
 
 
-    public static final double CHINA_LATITUDE_MIN = 55.8271D;
-    public static final double CHINA_LATITUDE_MAX = 0.8293D;
+    public static final double CHINA_LATITUDE_MIN = 0.8293D;
+    public static final double CHINA_LATITUDE_MAX = 55.8271D;
     public static final double CHINA_LONGITUDE_MIN = 72.0040D;
     public static final double CHINA_LONGITUDE_MAX = 137.8347D;
     /**

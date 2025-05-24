@@ -16,6 +16,7 @@
 package org.traccar.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.LoggerFactory;
 import org.traccar.config.Config;
 import org.traccar.model.*;
 import org.traccar.storage.query.Columns;
@@ -65,6 +66,7 @@ public class DatabaseStorage extends Storage {
         query.append(formatCondition(request.getCondition()));
         query.append(formatOrder(request.getOrder()));
         try {
+            LoggerFactory.getLogger(getClass()).info("query: {}", query);
             QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString());
             for (Map.Entry<String, Object> variable : getConditionVariables(request.getCondition()).entrySet()) {
                 builder.setValue(variable.getKey(), variable.getValue());
@@ -222,6 +224,8 @@ public class DatabaseStorage extends Storage {
             if (condition.getDeviceId() > 0) {
                 results.put("deviceId", condition.getDeviceId());
             }
+        } else if (genericCondition instanceof Condition.NotConvertedPositions condition) {
+            results.put("platform", condition.getPlatform());
         }
         return results;
     }
@@ -282,11 +286,10 @@ public class DatabaseStorage extends Storage {
 
             } else if (genericCondition instanceof Condition.NotConvertedPositions condition) {
 
-                result.append(formatCondition(new Condition.Equals("platform", condition.getPlatform()), false));
-                result.append(" AND ");
                 result.append("id NOT IN (");
                 result.append("SELECT id FROM ");
                 result.append(getStorageName(ConvertedPosition.class));
+                result.append(formatCondition(new Condition.Equals("platform", condition.getPlatform())));
                 result.append(")");
 
             }

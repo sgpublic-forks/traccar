@@ -82,10 +82,10 @@ public final class PositionUtil {
         return storage.getObjects(Position.class, new Request(
                 new Columns.All(),
                 Condition.merge(List.of(
-                        new Condition.Compare("latitude", "<", "latitude", CoordinateUtil.CHINA_LATITUDE_MAX),
-                        new Condition.Compare("latitude", ">", "latitude", CoordinateUtil.CHINA_LATITUDE_MIN),
-                        new Condition.Compare("longitude", "<", "longitude", CoordinateUtil.CHINA_LONGITUDE_MAX),
-                        new Condition.Compare("longitude", ">", "longitude", CoordinateUtil.CHINA_LONGITUDE_MIN),
+                        new Condition.Compare("latitude", "<", "latitude_max", CoordinateUtil.CHINA_LATITUDE_MAX),
+                        new Condition.Compare("latitude", ">", "latitude_min", CoordinateUtil.CHINA_LATITUDE_MIN),
+                        new Condition.Compare("longitude", "<", "longitude_max", CoordinateUtil.CHINA_LONGITUDE_MAX),
+                        new Condition.Compare("longitude", ">", "longitude_min", CoordinateUtil.CHINA_LONGITUDE_MIN),
                         new Condition.NotConvertedPositions(platform)
                 )),
                 new Order("fixTime", true, limit)));

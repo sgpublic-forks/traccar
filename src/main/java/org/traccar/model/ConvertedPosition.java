@@ -2,14 +2,14 @@ package org.traccar.model;
 
 import org.traccar.storage.StorageName;
 
-@StorageName("tc_converted_position")
+@StorageName("tc_converted_positions")
 public class ConvertedPosition extends ExtendedModel {
-    public static final String PLATFORM_AUTONAVI = "autonavi";
-    public static final String PLATFORM_BAIDU = "baidu";
-    public static final String PLATFORM_TENCENT = "tencent";
+    public static final String PLATFORM_AUTONAVI = "AutoNavi";
+    public static final String PLATFORM_BAIDU = "Baidu";
+    public static final String PLATFORM_TENCENT = "Tencent";
 
-    public static final String CRS_GCJ_02 = "gcj02";
-    public static final String CRS_BD_09 = "bd09";
+    public static final String CRS_GCJ_02 = "GCJ_02";
+    public static final String CRS_BD_09 = "BD_09";
 
     public ConvertedPosition() {
     }
