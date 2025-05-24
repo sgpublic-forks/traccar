@@ -1,6 +1,5 @@
 package org.traccar.geoconv;
 
-import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Singleton;
 import jakarta.inject.Inject;
 import jakarta.json.JsonObject;
@@ -54,11 +53,6 @@ public class BaiduPositionConverter extends PositionConverter {
     }
 
     @Override
-    protected RateLimiter createRateLimiter() {
-        return RateLimiter.create(QPS);
-    }
-
-    @Override
     protected SignedRequestProvider createSignedRequestProvider(String secretKey, Client client) {
         return new SignedRequestProvider(secretKey, client, API_URL);
     }
@@ -66,6 +60,16 @@ public class BaiduPositionConverter extends PositionConverter {
     @Override
     public int getMaxPositionPerRequest() {
         return MAX_POSITION_COUNT;
+    }
+
+    @Override
+    public int getMaxRequestPerDay() {
+        return DAY_LIMIT;
+    }
+
+    @Override
+    public int getMaxRequestPerSec() {
+        return QPS;
     }
 
     @Override

@@ -1,8 +1,6 @@
 package org.traccar.geoconv;
 
-import com.google.common.util.concurrent.RateLimiter;
 import jakarta.inject.Inject;
-import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Invocation;
@@ -15,7 +13,6 @@ import org.traccar.model.ConvertedPosition;
 import org.traccar.model.Position;
 import org.traccar.storage.Storage;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -59,11 +56,6 @@ public class TencentPositionConverter extends PositionConverter {
     }
 
     @Override
-    protected RateLimiter createRateLimiter() {
-        return RateLimiter.create(QPS);
-    }
-
-    @Override
     protected SignedRequestProvider createSignedRequestProvider(String secretKey, Client client) {
         return new SignedRequestProvider(secretKey, client, API_URL);
     }
@@ -71,6 +63,16 @@ public class TencentPositionConverter extends PositionConverter {
     @Override
     public int getMaxPositionPerRequest() {
         return MAX_POSITION_COUNT;
+    }
+
+    @Override
+    public int getMaxRequestPerDay() {
+        return DAY_LIMIT;
+    }
+
+    @Override
+    public int getMaxRequestPerSec() {
+        return QPS;
     }
 
     @Override

@@ -3,7 +3,7 @@ package org.traccar.model;
 import org.traccar.storage.StorageName;
 
 @StorageName("tc_converted_position")
-public class ConvertedPosition extends Message {
+public class ConvertedPosition extends ExtendedModel {
     public static final String PLATFORM_AUTONAVI = "autonavi";
     public static final String PLATFORM_BAIDU = "baidu";
     public static final String PLATFORM_TENCENT = "tencent";

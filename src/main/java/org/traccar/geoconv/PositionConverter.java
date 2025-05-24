@@ -1,6 +1,7 @@
 package org.traccar.geoconv;
 
-import com.google.common.util.concurrent.RateLimiter;
+import io.github.bucket4j.BlockingBucket;
+import io.github.bucket4j.Bucket;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.json.JsonObject;
@@ -17,16 +18,13 @@ import org.traccar.model.ConvertedPosition;
 import org.traccar.model.Position;
 import org.traccar.schedule.ScheduleTask;
 import org.traccar.storage.Storage;
-import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Request;
 
-import java.util.LinkedList;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -41,7 +39,7 @@ public abstract class PositionConverter extends BasePositionHandler implements S
     protected final String apiKey;
     private final String secretKey;
 
-    private final RateLimiter rateLimiter;
+    private final BlockingBucket rateLimiter;
 
     protected PositionConverter(Storage storage, String platform, String crs, Client client, @Nullable String apiKey, @Nullable String secretKey) {
         this.storage = storage;
@@ -73,7 +71,19 @@ public abstract class PositionConverter extends BasePositionHandler implements S
         return longitude + "," + latitude;
     }
 
-    protected abstract RateLimiter createRateLimiter();
+    private BlockingBucket createRateLimiter() {
+        return Bucket.builder()
+                .addLimit(limit -> {
+                    int qpd = getMaxRequestPerDay();
+                    return limit.capacity(qpd).refillIntervally(qpd, Duration.ofDays(1));
+                })
+                .addLimit(limit -> {
+                    int qps = getMaxRequestPerSec();
+                    return limit.capacity(qps).refillGreedy(qps, Duration.ofSeconds(1));
+                })
+                .build()
+                .asBlocking();
+    }
 
     protected abstract SignedRequestProvider createSignedRequestProvider(String secretKey, Client client);
 
@@ -82,6 +92,10 @@ public abstract class PositionConverter extends BasePositionHandler implements S
     protected abstract Invocation.Builder createRequest(SignedRequestProvider request);
 
     public abstract int getMaxPositionPerRequest();
+
+    public abstract int getMaxRequestPerSec();
+
+    public abstract int getMaxRequestPerDay();
 
     private List<ConvertedPosition> getConvertedPosition(@Nonnull List<Position> positions) throws GeoConvException {
         SignedRequestProvider request = createSignedRequestProvider(secretKey, client);
@@ -99,21 +113,21 @@ public abstract class PositionConverter extends BasePositionHandler implements S
     @Override
     public void run() {
         while (true) {
-            rateLimiter.acquire();
             List<Position> requestPositions;
-            synchronized (this) {
-                try {
+            try {
+                rateLimiter.consume(1);
+                synchronized (this) {
                     requestPositions = PositionUtil.getLatestUnconvertedPositions(storage, platform, getMaxPositionPerRequest());
                     if (requestPositions.isEmpty()) {
                         this.wait(30_000);
                         continue;
                     }
-                } catch (InterruptedException ignore) {
-                    break;
-                } catch (Exception error) {
-                    LOGGER.debug("Failed to get non-converted position from database", error);
-                    continue;
                 }
+            } catch (InterruptedException ignore) {
+                break;
+            } catch (Exception error) {
+                LOGGER.debug("Failed to get non-converted position from database", error);
+                continue;
             }
             List<ConvertedPosition> convertedPositions;
             try {
