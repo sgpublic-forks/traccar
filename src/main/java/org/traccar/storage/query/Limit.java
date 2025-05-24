@@ -27,4 +27,5 @@ public class Limit {
         return value;
     }
 
+    public static final Limit ALL = new Limit(0);
 }
