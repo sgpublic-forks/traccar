@@ -15,7 +15,9 @@
  */
 package org.traccar.storage.query;
 
+import org.traccar.storage.DatabaseStorage;
 import org.traccar.storage.QueryIgnore;
+import org.traccar.storage.StorageException;
 
 import java.beans.Introspector;
 import java.lang.reflect.Method;
@@ -32,12 +34,20 @@ public abstract class Columns {
     protected List<String> getAllColumns(Class<?> clazz, String type) {
         List<String> columns = new LinkedList<>();
         Method[] methods = clazz.getMethods();
+        String storageName = "";
+        if (type.equals("get")) {
+            try {
+                storageName = DatabaseStorage.getStorageName(clazz) + ".";
+            } catch (StorageException e) {
+
+            }
+        }
         for (Method method : methods) {
             int parameterCount = type.equals("set") ? 1 : 0;
             if (method.getName().startsWith(type) && method.getParameterTypes().length == parameterCount
                     && !method.isAnnotationPresent(QueryIgnore.class)
                     && !method.getName().equals("getClass")) {
-                columns.add(Introspector.decapitalize(method.getName().substring(3)));
+                columns.add(storageName + Introspector.decapitalize(method.getName().substring(3)));
             }
         }
         return columns;

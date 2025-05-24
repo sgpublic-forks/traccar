@@ -42,14 +42,16 @@ public interface Condition {
     class Compare implements Condition {
         private final String column;
         private final String operator;
-        private final String variable;
-        private final Object value;
+        private final Value value;
 
-        public Compare(String column, String operator, String variable, Object value) {
+        public Compare(String column, String operator, Value value) {
             this.column = column;
             this.operator = operator;
-            this.variable = variable;
             this.value = value;
+        }
+
+        public Compare(String column, String operator, String variable, Object value) {
+            this(column, operator, new Value.RawValue(variable, value));
         }
 
         public String getColumn() {
@@ -60,27 +62,23 @@ public interface Condition {
             return operator;
         }
 
-        public String getVariable() {
-            return variable;
-        }
-
-        public Object getValue() {
+        public Value getValue() {
             return value;
         }
     }
 
     class Between implements Condition {
         private final String column;
-        private final String fromVariable;
-        private final Object fromValue;
-        private final String toVariable;
-        private final Object toValue;
+        private final Value fromValue;
+        private final Value toValue;
 
         public Between(String column, String fromVariable, Object fromValue, String toVariable, Object toValue) {
+            this(column, new Value.RawValue(fromVariable, fromValue), new Value.RawValue(toVariable, toValue));
+        }
+
+        public Between(String column, Value fromValue, Value toValue) {
             this.column = column;
-            this.fromVariable = fromVariable;
             this.fromValue = fromValue;
-            this.toVariable = toVariable;
             this.toValue = toValue;
         }
 
@@ -88,19 +86,11 @@ public interface Condition {
             return column;
         }
 
-        public String getFromVariable() {
-            return fromVariable;
-        }
-
-        public Object getFromValue() {
+        public Value getFromValue() {
             return fromValue;
         }
 
-        public String getToVariable() {
-            return toVariable;
-        }
-
-        public Object getToValue() {
+        public Value getToValue() {
             return toValue;
         }
     }
@@ -208,4 +198,41 @@ public interface Condition {
         }
     }
 
+    interface Value {
+        class RawValue implements Value {
+            private final String variable;
+            private final Object value;
+
+            public RawValue(String variable, Object value) {
+                this.variable = variable;
+                this.value = value;
+            }
+
+            public String getVariable() {
+                return variable;
+            }
+
+            public Object getValue() {
+                return value;
+            }
+        }
+
+        class ColumnValue implements Value {
+            private final Class<?> entity;
+            private final String column;
+
+            public ColumnValue(Class<?> table, String column) {
+                this.entity = table;
+                this.column = column;
+            }
+
+            public Class<?> getEntity() {
+                return entity;
+            }
+
+            public String getColumn() {
+                return column;
+            }
+        }
+    }
 }

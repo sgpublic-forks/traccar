@@ -22,10 +22,7 @@ import org.traccar.model.Device;
 import org.traccar.model.Group;
 import org.traccar.model.GroupedModel;
 import org.traccar.model.Permission;
-import org.traccar.storage.query.Columns;
-import org.traccar.storage.query.Condition;
-import org.traccar.storage.query.Order;
-import org.traccar.storage.query.Request;
+import org.traccar.storage.query.*;
 
 import jakarta.inject.Inject;
 import javax.sql.DataSource;
@@ -66,8 +63,10 @@ public class DatabaseStorage extends Storage {
             query.append(formatColumns(request.getColumns().getColumns(clazz, "set"), c -> c));
         }
         query.append(" FROM ").append(getStorageName(clazz));
+        query.append(formatLeftJoin(request.getLeftJoin()));
         query.append(formatCondition(request.getCondition()));
         query.append(formatOrder(request.getOrder()));
+        query.append(formatLimit(request.getLimit()));
         try {
             QueryBuilder builder = QueryBuilder.create(config, dataSource, objectMapper, query.toString());
             for (Map.Entry<String, Object> variable : getConditionVariables(request.getCondition()).entrySet()) {
@@ -196,7 +195,7 @@ public class DatabaseStorage extends Storage {
         }
     }
 
-    private String getStorageName(Class<?> clazz) throws StorageException {
+    public static String getStorageName(Class<?> clazz) throws StorageException {
         StorageName storageName = clazz.getAnnotation(StorageName.class);
         if (storageName == null) {
             throw new StorageException("StorageName annotation is missing");
@@ -207,12 +206,16 @@ public class DatabaseStorage extends Storage {
     private Map<String, Object> getConditionVariables(Condition genericCondition) {
         Map<String, Object> results = new HashMap<>();
         if (genericCondition instanceof Condition.Compare condition) {
-            if (condition.getValue() != null) {
-                results.put(condition.getVariable(), condition.getValue());
+            if (condition.getValue() != null && condition.getValue() instanceof Condition.Value.RawValue value) {
+                results.put(value.getVariable(), value.getValue());
             }
         } else if (genericCondition instanceof Condition.Between condition) {
-            results.put(condition.getFromVariable(), condition.getFromValue());
-            results.put(condition.getToVariable(), condition.getToValue());
+            if (condition.getFromValue() instanceof Condition.Value.RawValue fromValue) {
+                results.put(fromValue.getVariable(), fromValue.getValue());
+            }
+            if (condition.getToValue() instanceof Condition.Value.RawValue toValue) {
+                results.put(toValue.getVariable(), toValue.getValue());
+            }
         } else if (genericCondition instanceof Condition.Binary condition) {
             results.putAll(getConditionVariables(condition.getFirst()));
             results.putAll(getConditionVariables(condition.getSecond()));
@@ -234,6 +237,17 @@ public class DatabaseStorage extends Storage {
         return columns.stream().map(mapper).collect(Collectors.joining(", "));
     }
 
+    private String formatLeftJoin(LeftJoin leftJoin) throws StorageException {
+        StringBuilder result = new StringBuilder();
+        if (leftJoin != null) {
+            result.append(" LEFT JOIN ");
+            result.append(getStorageName(leftJoin.getEntity()));
+            result.append(" ON ");
+            result.append(formatCondition(leftJoin.getCondition()));
+        }
+        return result.toString();
+    }
+
     private String formatCondition(Condition genericCondition) throws StorageException {
         return formatCondition(genericCondition, true);
     }
@@ -249,16 +263,21 @@ public class DatabaseStorage extends Storage {
                 result.append(condition.getColumn());
                 result.append(" ");
                 result.append(condition.getOperator());
-                result.append(" :");
-                result.append(condition.getVariable());
+                result.append(" ");
+                result.append(formatValue(condition.getValue()));
 
             } else if (genericCondition instanceof Condition.Between condition) {
 
+                if (!(condition.getFromValue() instanceof Condition.Value.RawValue
+                        && condition.getToValue() instanceof Condition.Value.RawValue)) {
+                    throw new StorageException("BETWEEN condition only supports raw values!");
+                }
+
                 result.append(condition.getColumn());
-                result.append(" BETWEEN :");
-                result.append(condition.getFromVariable());
-                result.append(" AND :");
-                result.append(condition.getToVariable());
+                result.append(" BETWEEN ");
+                result.append(formatValue(condition.getFromValue()));
+                result.append(" AND ");
+                result.append(formatValue(condition.getToValue()));
 
             } else if (genericCondition instanceof Condition.Binary condition) {
 
@@ -289,6 +308,19 @@ public class DatabaseStorage extends Storage {
         return result.toString();
     }
 
+    private String formatValue(Condition.Value value) throws StorageException {
+        StringBuilder result = new StringBuilder();
+        if (value instanceof Condition.Value.RawValue rawValue) {
+            result.append(":");
+            result.append(rawValue.getVariable());
+        } else if (value instanceof Condition.Value.ColumnValue columnValue) {
+            result.append(getStorageName(columnValue.getEntity()));
+            result.append(".");
+            result.append(columnValue.getColumn());
+        }
+        return result.toString();
+    }
+
     private String formatOrder(Order order) {
         StringBuilder result = new StringBuilder();
         if (order != null) {
@@ -297,15 +329,20 @@ public class DatabaseStorage extends Storage {
             if (order.getDescending()) {
                 result.append(" DESC");
             }
-            if (order.getLimit() > 0) {
-                if (databaseType.equals("Microsoft SQL Server")) {
-                    result.append(" OFFSET 0 ROWS FETCH FIRST ");
-                    result.append(order.getLimit());
-                    result.append(" ROWS ONLY");
-                } else {
-                    result.append(" LIMIT ");
-                    result.append(order.getLimit());
-                }
+        }
+        return result.toString();
+    }
+
+    private String formatLimit(Limit limit) {
+        StringBuilder result = new StringBuilder();
+        if (limit.getValue() > 0) {
+            if (databaseType.equals("Microsoft SQL Server")) {
+                result.append(" OFFSET 0 ROWS FETCH FIRST ");
+                result.append(limit.getValue());
+                result.append(" ROWS ONLY");
+            } else {
+                result.append(" LIMIT ");
+                result.append(limit.getValue());
             }
         }
         return result.toString();

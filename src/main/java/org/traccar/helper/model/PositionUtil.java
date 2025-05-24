@@ -15,10 +15,7 @@
  */
 package org.traccar.helper.model;
 
-import org.traccar.model.BaseModel;
-import org.traccar.model.Device;
-import org.traccar.model.Position;
-import org.traccar.model.User;
+import org.traccar.model.*;
 import org.traccar.session.cache.CacheManager;
 import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
@@ -78,7 +75,6 @@ public final class PositionUtil {
     }
 
     public static List<Position> getLatestUnconvertedPositions(Storage storage, String platform, int limit) throws StorageException {
-        // TODO: use left join to get unconverted positions
-        return null;
+        storage.getObjects(ConvertedPosition.class)
     }
 }

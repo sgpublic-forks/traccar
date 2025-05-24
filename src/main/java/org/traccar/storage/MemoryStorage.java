@@ -62,16 +62,20 @@ public class MemoryStorage extends Storage {
 
         if (genericCondition instanceof Condition.Compare condition) {
 
-            Object value = retrieveValue(object, condition.getVariable());
-            int result = ((Comparable) value).compareTo(condition.getValue());
-            return switch (condition.getOperator()) {
-                case "<" -> result < 0;
-                case "<=" -> result <= 0;
-                case ">" -> result > 0;
-                case ">=" -> result >= 0;
-                case "=" -> result == 0;
-                default -> throw new RuntimeException("Unsupported comparison condition");
-            };
+            if (condition.getValue() instanceof Condition.Value.RawValue rawValue) {
+                Object value = retrieveValue(object, rawValue.getVariable());
+                int result = ((Comparable) value).compareTo(condition.getValue());
+                return switch (condition.getOperator()) {
+                    case "<" -> result < 0;
+                    case "<=" -> result <= 0;
+                    case ">" -> result > 0;
+                    case ">=" -> result >= 0;
+                    case "=" -> result == 0;
+                    default -> throw new RuntimeException("Unsupported comparison condition");
+                };
+            } else if (condition.getValue() instanceof Condition.Value.RawValue valueList) {
+
+            }
 
         } else if (genericCondition instanceof Condition.Between condition) {
 
@@ -132,7 +136,7 @@ public class MemoryStorage extends Storage {
         Set<String> columns = new HashSet<>(request.getColumns().getColumns(entity.getClass(), "get"));
         Collection<Object> items;
         if (request.getCondition() != null) {
-            long id = (Long) ((Condition.Equals) request.getCondition()).getValue();
+            long id = (Long) ((Condition.Value.RawValue)((Condition.Equals) request.getCondition()).getValue()).getValue();
             items = List.of(objects.computeIfAbsent(entity.getClass(), key -> new HashMap<>()).get(id));
         } else {
             items = objects.computeIfAbsent(entity.getClass(), key -> new HashMap<>()).values();
@@ -155,7 +159,7 @@ public class MemoryStorage extends Storage {
 
     @Override
     public void removeObject(Class<?> clazz, Request request) {
-        long id = (Long) ((Condition.Equals) request.getCondition()).getValue();
+        long id = (Long) ((Condition.Value.RawValue)((Condition.Equals) request.getCondition()).getValue()).getValue();
         objects.computeIfAbsent(clazz, key -> new HashMap<>()).remove(id);
     }
 

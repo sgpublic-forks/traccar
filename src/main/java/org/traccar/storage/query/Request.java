@@ -18,8 +18,10 @@ package org.traccar.storage.query;
 public class Request {
 
     private final Columns columns;
+    private final LeftJoin leftJoin;
     private final Condition condition;
     private final Order order;
+    private final Limit limit;
 
     public Request(Columns columns) {
         this(columns, null, null);
@@ -38,13 +40,31 @@ public class Request {
     }
 
     public Request(Columns columns, Condition condition, Order order) {
+        this(columns, null, condition, order);
+    }
+
+    public Request(Columns columns, Condition condition, Order order, Limit limit) {
+        this(columns, null, condition, order, limit);
+    }
+
+    public Request(Columns columns, LeftJoin leftJoin, Condition condition, Order order) {
+        this(columns, leftJoin, condition, order, Limit.ALL);
+    }
+
+    public Request(Columns columns, LeftJoin leftJoin, Condition condition, Order order, Limit limit) {
         this.columns = columns;
+        this.leftJoin = leftJoin;
         this.condition = condition;
         this.order = order;
+        this.limit = limit;
     }
 
     public Columns getColumns() {
         return columns;
+    }
+
+    public LeftJoin getLeftJoin() {
+        return leftJoin;
     }
 
     public Condition getCondition() {
@@ -55,4 +75,7 @@ public class Request {
         return order;
     }
 
+    public Limit getLimit() {
+        return limit;
+    }
 }
