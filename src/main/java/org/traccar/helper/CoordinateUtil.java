@@ -42,6 +42,11 @@ public final class CoordinateUtil {
      */
     public static final double CORRECTION_PARAM = 0.00669342162296594323D;
 
+
+    public static final double CHINA_LATITUDE_MIN = 55.8271D;
+    public static final double CHINA_LATITUDE_MAX = 0.8293D;
+    public static final double CHINA_LONGITUDE_MIN = 72.0040D;
+    public static final double CHINA_LONGITUDE_MAX = 137.8347D;
     /**
      * Determine whether the coordinates are in non-China range
      * GCJ-02 coordinate system is only valid for China, no conversion is needed for non-Chinese areas.
@@ -51,7 +56,7 @@ public final class CoordinateUtil {
      * @return Whether the coordinates are in non-China area
      */
     public static boolean outOfChina(double latitude, double longitude) {
-        return (latitude < 0.8293 || latitude > 55.8271) || (longitude < 72.004 || longitude > 137.8347);
+        return (latitude < CHINA_LATITUDE_MIN || latitude > CHINA_LATITUDE_MAX) || (longitude < CHINA_LONGITUDE_MIN || longitude > CHINA_LONGITUDE_MAX);
     }
 
     /**

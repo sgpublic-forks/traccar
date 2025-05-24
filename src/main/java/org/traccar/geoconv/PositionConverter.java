@@ -1,7 +1,9 @@
 package org.traccar.geoconv;
 
 import com.google.common.util.concurrent.RateLimiter;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Invocation;
 import jakarta.ws.rs.core.Response;
@@ -81,32 +83,48 @@ public abstract class PositionConverter extends BasePositionHandler implements S
 
     public abstract int getMaxPositionPerRequest();
 
-    private void request(List<Position> positions) {
+    private List<ConvertedPosition> getConvertedPosition(@Nonnull List<Position> positions) throws GeoConvException {
         SignedRequestProvider request = createSignedRequestProvider(secretKey, client);
         setRequestParams(positions, request);
         Response resp = createRequest(request).get();
+        List<ConvertedPosition> result = parseConvertedPosition(resp.readEntity(JsonObject.class));
+        for (int i = 0; i < positions.size(); i++) {
+            result.get(i).setId(positions.get(i).getId());
+        }
+        return result;
     }
+
+    protected abstract List<ConvertedPosition> parseConvertedPosition(JsonObject response) throws GeoConvException;
 
     @Override
     public void run() {
         while (true) {
+            rateLimiter.acquire();
             List<Position> requestPositions;
             synchronized (this) {
                 try {
                     requestPositions = PositionUtil.getLatestUnconvertedPositions(storage, platform, getMaxPositionPerRequest());
                     if (requestPositions.isEmpty()) {
-                        this.wait(60_000);
+                        this.wait(30_000);
                         continue;
                     }
-                } catch (StorageException e) {
-                    LOGGER.debug("Failed to store converted position");
-                    continue;
                 } catch (InterruptedException ignore) {
                     break;
+                } catch (Exception error) {
+                    LOGGER.debug("Failed to get non-converted position from database", error);
+                    continue;
                 }
             }
-            rateLimiter.acquire();
-            request(requestPositions);
+            List<ConvertedPosition> convertedPositions;
+            try {
+                convertedPositions = getConvertedPosition(requestPositions);
+            } catch (Exception error) {
+                LOGGER.warn("Failed to request converted position", error);
+                continue;
+            }
+            for (ConvertedPosition position : convertedPositions) {
+                save(position);
+            }
         }
     }
 
@@ -134,9 +152,7 @@ public abstract class PositionConverter extends BasePositionHandler implements S
             callback.processed(true);
             return;
         }
-        synchronized (this) {
-            notify();
-        }
+        this.notify();
         callback.processed(false);
     }
 
@@ -144,7 +160,7 @@ public abstract class PositionConverter extends BasePositionHandler implements S
         try {
             storage.addObject(convertedPosition, new Request(new Columns.All()));
         } catch (Exception error) {
-            LOGGER.warn("Failed to store converted position", error);
+            LOGGER.warn("Failed to store converted position, id: {}", convertedPosition.getId(), error);
         }
     }
 

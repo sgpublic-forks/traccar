@@ -3,6 +3,7 @@ package org.traccar.geoconv;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Singleton;
 import jakarta.inject.Inject;
+import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Invocation;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.traccar.model.ConvertedPosition;
 import org.traccar.model.Position;
 import org.traccar.storage.Storage;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -69,5 +71,25 @@ public class AutoNaviPositionConverter extends PositionConverter {
     @Override
     public int getMaxPositionPerRequest() {
         return MAX_POSITION_COUNT;
+    }
+
+    @Override
+    protected List<ConvertedPosition> parseConvertedPosition(JsonObject response) throws GeoConvException {
+        if (response.getInt("status", -1) != 0) {
+            throw new GeoConvException(response.getString("info", "Unknown error."));
+        }
+        try {
+            LinkedList<ConvertedPosition> convertedPositions = new LinkedList<>();
+            for (String location : response.getString("locations").split(";")) {
+                ConvertedPosition position = new ConvertedPosition(platform, crs);
+                String[] latLng = location.split(",");
+                position.setLatitude(Double.parseDouble(latLng[0]));
+                position.setLongitude(Double.parseDouble(latLng[1]));
+                convertedPositions.add(position);
+            }
+            return convertedPositions;
+        } catch (Exception error) {
+            throw new GeoConvException("Failed to parse converted position result.", error);
+        }
     }
 }

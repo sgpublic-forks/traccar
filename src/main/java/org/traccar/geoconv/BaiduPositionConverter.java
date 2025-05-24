@@ -3,6 +3,7 @@ package org.traccar.geoconv;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Singleton;
 import jakarta.inject.Inject;
+import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Invocation;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.traccar.model.ConvertedPosition;
 import org.traccar.model.Position;
 import org.traccar.storage.Storage;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -64,5 +66,25 @@ public class BaiduPositionConverter extends PositionConverter {
     @Override
     public int getMaxPositionPerRequest() {
         return MAX_POSITION_COUNT;
+    }
+
+    @Override
+    protected List<ConvertedPosition> parseConvertedPosition(JsonObject response) throws GeoConvException {
+        int code = response.getInt("status", -1);
+        if (response.getInt("status", -1) != 0) {
+            throw new GeoConvException("Failed to request converted position (code: " + code + "), see: https://lbsyun.baidu.com/faq/api?title=webapi/guide/changeposition-base#%E6%9C%8D%E5%8A%A1%E7%8A%B6%E6%80%81%E7%A0%81");
+        }
+        try {
+            LinkedList<ConvertedPosition> convertedPositions = new LinkedList<>();
+            for (JsonObject location : response.getJsonArray("result").getValuesAs(JsonObject.class)) {
+                ConvertedPosition position = new ConvertedPosition(platform, crs);
+                position.setLatitude(location.getJsonNumber("x").doubleValue());
+                position.setLongitude(location.getJsonNumber("y").doubleValue());
+                convertedPositions.add(position);
+            }
+            return convertedPositions;
+        } catch (Exception error) {
+            throw new GeoConvException("Failed to parse converted position result.", error);
+        }
     }
 }

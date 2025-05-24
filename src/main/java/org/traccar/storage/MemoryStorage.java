@@ -15,6 +15,7 @@
  */
 package org.traccar.storage;
 
+import org.traccar.helper.model.PositionUtil;
 import org.traccar.model.BaseModel;
 import org.traccar.model.Pair;
 import org.traccar.model.Permission;
@@ -102,6 +103,10 @@ public class MemoryStorage extends Storage {
                     });
 
         } else if (genericCondition instanceof Condition.LatestPositions) {
+
+            return false;
+
+        } else if (genericCondition instanceof Condition.NotConvertedPositions) {
 
             return false;
 

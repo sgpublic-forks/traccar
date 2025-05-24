@@ -14,8 +14,9 @@ public class ConvertedPosition extends Message {
     public ConvertedPosition() {
     }
 
-    public ConvertedPosition(String platform) {
+    public ConvertedPosition(String platform, String crs) {
         this.platform = platform;
+        this.crs = crs;
     }
 
     private String platform;
@@ -28,10 +29,6 @@ public class ConvertedPosition extends Message {
 
     public String getCrs() {
         return crs;
-    }
-
-    public void setCrs(String crs) {
-        this.crs = crs;
     }
 
     private double latitude;

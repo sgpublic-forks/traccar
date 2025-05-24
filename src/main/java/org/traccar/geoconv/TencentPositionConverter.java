@@ -2,6 +2,8 @@ package org.traccar.geoconv;
 
 import com.google.common.util.concurrent.RateLimiter;
 import jakarta.inject.Inject;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Invocation;
 import org.slf4j.Logger;
@@ -13,6 +15,8 @@ import org.traccar.model.ConvertedPosition;
 import org.traccar.model.Position;
 import org.traccar.storage.Storage;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -67,5 +71,24 @@ public class TencentPositionConverter extends PositionConverter {
     @Override
     public int getMaxPositionPerRequest() {
         return MAX_POSITION_COUNT;
+    }
+
+    @Override
+    protected List<ConvertedPosition> parseConvertedPosition(JsonObject response) throws GeoConvException {
+        if (response.getInt("status", -1) != 0) {
+            throw new GeoConvException(response.getString("message", "Unknown error."));
+        }
+        try {
+            LinkedList<ConvertedPosition> convertedPositions = new LinkedList<>();
+            for (JsonObject location : response.getJsonArray("locations").getValuesAs(JsonObject.class)) {
+                ConvertedPosition position = new ConvertedPosition(platform, crs);
+                position.setLatitude(location.getJsonNumber("lat").doubleValue());
+                position.setLongitude(location.getJsonNumber("lng").doubleValue());
+                convertedPositions.add(position);
+            }
+            return convertedPositions;
+        } catch (Exception error) {
+            throw new GeoConvException("Failed to parse converted position result.", error);
+        }
     }
 }
